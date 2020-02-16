@@ -1,6 +1,11 @@
 #ifndef STOMP_CONNECTION_LISTENER_H
 #define STOMP_CONNECTION_LISTENER_H
 
+extern "C"
+{
+#include <uuid/uuid.h>
+}
+
 #include <string>
 #include <memory>
 
@@ -37,6 +42,13 @@ namespace stomp {
       } else if (frameType == FRAME_RECEIVER_LOOP_COMPLETED) {
         this->onReceiverLoopCompleted(frame);
       }
+    }
+    std::string generateUuid() {
+      uuid_t uuid;
+      uuid_generate_random ( uuid );
+      char s[37];
+      uuid_unparse ( uuid, s );
+      return s;
     }
     // Called by the STOMP connection once a TCP/IP connection to the
     // STOMP server has been established or re-established. Note that

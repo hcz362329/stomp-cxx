@@ -54,6 +54,7 @@ namespace stomp {
     // virtual void stop() {}
 
     virtual bool isConnected() { return connected_; }
+    virtual bool hasConnectError() { return connectionError_; }
     virtual void setConnected(bool connected) {
       // TODO connect wait semaphore
       connected_ = connected;
