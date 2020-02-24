@@ -8,9 +8,6 @@
 #include "listener.h"
 
 namespace stomp {
-  using HostAndPort = std::pair<std::string,int>;
-  using HostAndPortPtr = std::shared_ptr<HostAndPort>;
-
   class Publisher {
     // A registry of listeners
   protected:

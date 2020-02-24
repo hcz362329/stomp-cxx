@@ -37,12 +37,18 @@ namespace stomp {
       // TODO maybe do socket shutdown
       currentHostAndPort_ = nullptr;
       socket = nullptr;
-      this->notify(std::make_shared<Frame>(FRAME_DISCONNECTED));
+      this->notify(std::make_shared<Frame>(FRAME_DISCONNECTED, Headers {}, ""));
     }
     virtual void send(std::string content) {
       if (socket) {
         // TODO use socket semaphore
-        socket->send(content.c_str(), content.size());
+        size_t numChars = content.size();
+        char buffer[numChars+1];
+        for (int i=0; i<numChars; i++) {
+          buffer[i] = content.c_str()[i];
+          buffer[numChars] = 0;
+        }
+        socket->send(buffer, numChars+1);
       } else {
         throw SocketException {"Not connected!"};
       }
@@ -64,10 +70,10 @@ namespace stomp {
       while (running_ && socket == nullptr && (connectCount < reconnectAttemptsMax_ || reconnectAttemptsMax_ == -1)) {
         for (auto hostAndPort : hostsAndPorts_) {
           try {
-            socket = std::make_shared<TCPSocket>(hostAndPort->first, std::to_string(hostAndPort->second));
+            socket = std::make_shared<TCPSocket>(hostAndPort->first, hostAndPort->second);
             currentHostAndPort_ = hostAndPort;
             break;
-          } catch (auto& e) {
+          } catch (SocketException& e) {
             socket = nullptr;
             connectCount++;
           }

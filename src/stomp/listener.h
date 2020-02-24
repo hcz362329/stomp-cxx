@@ -9,7 +9,11 @@ extern "C"
 #include <string>
 #include <memory>
 
+using HostAndPort = std::pair<std::string,unsigned short>;
+using HostAndPortPtr = std::shared_ptr<HostAndPort>;
+
 #include "frame.h"
+#include "publisher.h"
 
 namespace stomp {
   class ConnectionListener {

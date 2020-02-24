@@ -57,15 +57,31 @@ namespace stomp {
   public:
     Frame(std::string cmd, Headers headers, std::string body) :
       cmd_ {cmd}, headers_ {headers}, body_ {body} {}
+    Frame(std::string content) {
+      std::stringstream s {content};
+      std::getline(s, cmd_);
+      std::string line;
+      while (getline(s, line)) {
+        if (line.size() == 0) break;
+        std::string key, value;
+        std::stringstream l {line};
+        getline(l, key, ':');
+        getline(l, value);
+        headers_[key] = value;
+      }
+      while (getline(s, line, '\0')) {
+        body_ += line;
+      }
+    }
     Frame() {}
     std::string getCmd() const { return cmd_; }
     Headers getHeaders() const { return headers_; }
     void setHeaders(Headers headers) { headers_ = headers; }
     std::string getBody() const { return body_; }
     void setBody(std::string body) { body_ = body; }
-    std::string getReceiptIdHeader() const { return headers_[HEADER_RECEIPT_ID]; }
+    std::string getReceiptIdHeader() { return headers_[HEADER_RECEIPT_ID]; }
     bool hasReceiptHeader() const { return headers_.count(HEADER_RECEIPT); }
-    std::string getReceiptHeader() const { return headers_[HEADER_RECEIPT]; }
+    std::string getReceiptHeader() { return headers_[HEADER_RECEIPT]; }
     std::string getContents() const {
       std::stringstream s {};
       s << cmd_ << std::endl;
