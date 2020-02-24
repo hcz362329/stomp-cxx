@@ -1,6 +1,8 @@
 #ifndef STOMP_PROTOCOL_10_H
 #define STOMP_PROTOCOL_10_H
 
+#include <memory>
+
 #include "listener.h"
 #include "base_transport.h"
 #include "exception.h"
@@ -46,7 +48,7 @@ class Protocol10 : public ConnectionListener {
       headers[HEADER_TRANSACTION] = transaction;
       this->sendFrame(FRAME_COMMIT, headers);
     }
-    void connect(OptString username, OptString passcode, bool wait = false, Headers headers = {}) {
+    void connect(OptString username = std::nullopt, OptString passcode = std::nullopt, bool wait = false, Headers headers = {}) {
       headers[HEADER_ACCEPT_VERSION] = version_;
       if (username) headers[HEADER_LOGIN] = username.value();
       if (passcode) headers[HEADER_PASSCODE] = passcode.value();
@@ -66,7 +68,7 @@ class Protocol10 : public ConnectionListener {
       headers[HEADER_DESTINATION] = destination;
       if (contentType) headers[HEADER_CONTENT_TYPE] = contentType.value();
       if (autoContentLength_ && headers.count(HEADER_CONTENT_LENGTH) == 0) {
-        headers[HEADER_CONTENT_LENGTH] = body.size();
+        headers[HEADER_CONTENT_LENGTH] = std::to_string(body.size());
       }
       this->sendFrame(FRAME_SEND, headers, body);
     }
@@ -85,6 +87,7 @@ class Protocol10 : public ConnectionListener {
       this->sendFrame(FRAME_UNSUBSCRIBE, headers);
     }
   };
+using Protocol10Ptr = std::shared_ptr<Protocol10>;
 }
 
 #endif

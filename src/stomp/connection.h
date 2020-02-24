@@ -1,6 +1,8 @@
 #ifndef STOMP_CONNECTION_H
 #define STOMP_CONNECTION_H
 
+#include <memory>
+
 #include "publisher.h"
 #include "base_transport.h"
 
@@ -24,6 +26,7 @@ namespace stomp {
       transport_->setReceipt(receiptId, value);
     }
   };
+  using ConnectionPtr = std::shared_ptr<BaseConnection>;
 }
 
 #endif
