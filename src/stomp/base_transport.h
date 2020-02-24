@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <thread>
 
 #include "publisher.h"
 #include "listener.h"
@@ -23,7 +24,7 @@ namespace stomp {
     HostAndPortPtr currentHostAndPort_ {};
     std::optional<std::string> disconnectReceipt_ {};
     bool notifiedOnDisconnect_ {false};
-    // createThreadFc_
+    std::thread createThreadFc_;
     // listenersChangeCondition_
     // receiverThreadExitCondition_
     // receiverThreadExited_
@@ -46,13 +47,14 @@ namespace stomp {
     virtual void start() {
       running_ = true;
       this->attemptConnection();
-      // this->createThreadFc(receiverLoop)
-      this->notify(std::make_shared<Frame>(FRAME_CONNECTING));
+      createThreadFc_ = std::thread([this](){ receiverLoop(); });
+      this->notify(std::make_shared<Frame>(FRAME_CONNECTING, Headers {}, ""));
     }
     // Stop the connection. Performs a clean shutdown by waiting for the
     // receiver thread to exit.
-    // virtual void stop() {}
-
+    virtual void stop() {
+      createThreadFc_.join();
+    }
     virtual bool isConnected() { return connected_; }
     virtual bool hasConnectError() { return connectionError_; }
     virtual void setConnected(bool connected) {
@@ -149,20 +151,24 @@ namespace stomp {
     // Main loop listening for incoming data.
     virtual void receiverLoop() {
       while (running_) {
-        // TODO
+        std::string content = this->read();
+        FramePtr frame = std::make_shared<Frame>(content);
+        this->processFrame(frame);
       }
-      this->notify(std::make_shared<Frame>(FRAME_RECEIVER_LOOP_COMPLETED));
+      this->notify(std::make_shared<Frame>(FRAME_RECEIVER_LOOP_COMPLETED, Headers {}, ""));
       if (!notifiedOnDisconnect_) {
-        this->notify(std::make_shared<Frame>(FRAME_DISCONNECTED));
+        this->notify(std::make_shared<Frame>(FRAME_DISCONNECTED, Headers {}, ""));
       }
     }
     // Read the next frame(s) from the socket.
     virtual std::string read() {
+      std::string content;
       if (running_) {
-        std::string content {this->receive()};
+        content = this->receive();
+//        if (content.size() > 0) break;
       }
       // TODO read from connection
-      return "";
+      return content;
     }
   };
   using TransportPtr = std::shared_ptr<BaseTransport>;
