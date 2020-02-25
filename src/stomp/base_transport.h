@@ -12,6 +12,9 @@
 #include "listener.h"
 #include "frame.h"
 
+#define STOMP_BUF_SIZE 1024
+#define STOMP_RECV_BUF_SIZE 2048
+
 namespace stomp {
   class BaseTransport : public Publisher {
   protected:
@@ -32,7 +35,8 @@ namespace stomp {
     // connectWaitCondition_
     bool autoDecode_ {true};
     std::string encoding_ {};
-    std::vector<std::string> receiveBuffer_ {};
+    char receiveBuf[STOMP_RECV_BUF_SIZE+1];
+    size_t bufEnd = 0;
   public:
     BaseTransport(bool autoDecode = true, std::string encoding = "utf8") :
       autoDecode_ {autoDecode}, encoding_ {encoding} {}
@@ -152,12 +156,11 @@ namespace stomp {
     // Main loop listening for incoming data.
     virtual void receiverLoop() {
       while (running_) {
-        this->read();
-        for (auto& content : receiveBuffer_) {
+        std::vector<std::string> frames = this->read();
+        for (auto& content : frames) {
           FramePtr frame = std::make_shared<Frame>(content);
           this->processFrame(frame);
         }
-        receiveBuffer_.clear();
       }
       this->notify(std::make_shared<Frame>(FRAME_RECEIVER_LOOP_COMPLETED, Headers {}, ""));
       if (!notifiedOnDisconnect_) {
@@ -165,12 +168,42 @@ namespace stomp {
       }
     }
     // Read the next frame(s) from the socket.
-    virtual void read() {
+    virtual std::vector<std::string> read() {
+      std::vector<std::string> frames {};
+      char msgBuf[STOMP_BUF_SIZE+1];
       if (running_) {
         this->receive();
-//        if (content.size() > 0) break;
+        int bufPos = 0;
+        while (bufPos<bufEnd) {
+          int msgPos = 0;
+          // copy a frame into the message buffer
+          while (bufPos<bufEnd && receiveBuf[bufPos] != 0) {
+            msgBuf[msgPos++] = receiveBuf[bufPos++];
+          }
+          if (bufPos < bufEnd) {
+            // got whole frame
+            msgBuf[msgPos] = 0;
+            std::string frame {msgBuf};
+            frames.push_back(frame);
+            bufPos++;
+            while (bufPos<bufEnd && receiveBuf[bufPos] == '\n') bufPos++;
+            if (bufPos == bufEnd) {
+              // all buffer consumed
+              bufEnd = 0;
+              break;
+            }
+          } else {
+            // incomplete frame?
+            // move to start of buffer and end
+            for (int j=0; j<msgPos; j++) {
+              receiveBuf[j] = msgBuf[j];
+            }
+            bufEnd = msgPos;
+            break;
+          }
+        }
       }
-      // TODO read from connection
+      return frames;
     }
   };
   using TransportPtr = std::shared_ptr<BaseTransport>;
