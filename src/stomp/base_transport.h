@@ -32,6 +32,7 @@ namespace stomp {
     // connectWaitCondition_
     bool autoDecode_ {true};
     std::string encoding_ {};
+    std::vector<std::string> receiveBuffer_ {};
   public:
     BaseTransport(bool autoDecode = true, std::string encoding = "utf8") :
       autoDecode_ {autoDecode}, encoding_ {encoding} {}
@@ -137,7 +138,7 @@ namespace stomp {
     // Send an encoded frame over this transport (to be implemented in subclasses).
     virtual void send(std::string content) = 0;
     // Receive a chunk of data (to be implemented in subclasses).
-    virtual std::string receive() = 0;
+    virtual void receive() = 0;
     // Cleanup the transport (to be implemented in subclasses).
     virtual void cleanup() = 0;
     // Attempt to establish a connection.
@@ -151,9 +152,12 @@ namespace stomp {
     // Main loop listening for incoming data.
     virtual void receiverLoop() {
       while (running_) {
-        std::string content = this->read();
-        FramePtr frame = std::make_shared<Frame>(content);
-        this->processFrame(frame);
+        this->read();
+        for (auto& content : receiveBuffer_) {
+          FramePtr frame = std::make_shared<Frame>(content);
+          this->processFrame(frame);
+        }
+        receiveBuffer_.clear();
       }
       this->notify(std::make_shared<Frame>(FRAME_RECEIVER_LOOP_COMPLETED, Headers {}, ""));
       if (!notifiedOnDisconnect_) {
@@ -161,14 +165,12 @@ namespace stomp {
       }
     }
     // Read the next frame(s) from the socket.
-    virtual std::string read() {
-      std::string content;
+    virtual void read() {
       if (running_) {
-        content = this->receive();
+        this->receive();
 //        if (content.size() > 0) break;
       }
       // TODO read from connection
-      return content;
     }
   };
   using TransportPtr = std::shared_ptr<BaseTransport>;

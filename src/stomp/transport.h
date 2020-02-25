@@ -1,6 +1,8 @@
 #ifndef STOMP_TRANSPORT_H
 #define STOMP_TRANSPORT_H
 
+#include <string>
+#include <sstream>
 #include <memory>
 #include <algorithm>
 #include <cmath>
@@ -22,7 +24,7 @@ namespace stomp {
     double reconnectSleepJitter_ {0.1};
     double reconnectSleepMax_ {60.0};
     int reconnectAttemptsMax_ {3};
-    int recvBytes {1024};
+    int recvBytes {2048};
     SocketPtr socket {};
   public:
     Transport(HostsAndPorts hostsAndPorts = {}, bool autoDecode = true, std::string encoding = "utf8") :
@@ -53,8 +55,21 @@ namespace stomp {
         throw SocketException {"Not connected!"};
       }
     }
-    virtual std::string receive() {
-      return socket->recv(recvBytes);
+    virtual void receive() {
+      char buffer[recvBytes+1];
+      for (int i=0; i<recvBytes+1; i++) buffer[i]=0;
+
+      int bytesRead = socket->recv(buffer, recvBytes);
+      // TODO fix this!
+      int j=0;
+      while (j<bytesRead) {
+        const char* p = buffer+j;
+        std::string message {p};
+        if (message.size() < 2) break;
+        receiveBuffer_.push_back(message);
+        while (j<bytesRead && buffer[j] != 0) j++;
+        j += 2;
+      }
     }
     virtual void cleanup() {
       socket = nullptr;

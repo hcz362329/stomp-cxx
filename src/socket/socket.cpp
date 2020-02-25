@@ -210,17 +210,6 @@ int CommunicatingSocket::recv(void *buffer, int bufferLen)
   return rtn;
 }
 
-std::string CommunicatingSocket::recv(int bufferLen)
-    {
-  char buffer[bufferLen+1];
-  for (int i=0; i<bufferLen+1; i++) buffer[i]=0;
-
-  recv(buffer, bufferLen);
-
-  std::string result {buffer};
-  return result;
-}
-
 std::string CommunicatingSocket::getForeignAddress()
     {
   sockaddr_in addr;

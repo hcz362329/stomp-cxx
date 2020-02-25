@@ -163,15 +163,6 @@ public:
   int recv(void *buffer, int bufferLen);
 
   /**
-   *   Read and return string up to bufferLen bytes data from this
-   *   socket.  Call connect() before calling recv()
-   *   @param bufferLen maximum number of bytes to read into buffer
-   *   @return string containing read data
-   *   @exception SocketException thrown if unable to receive data
-   */
-  std::string recv(int bufferLen);
-
-  /**
    *   Get the foreign address.  Call connect() before calling recv()
    *   @return foreign address
    *   @exception SocketException thrown if unable to fetch foreign address
